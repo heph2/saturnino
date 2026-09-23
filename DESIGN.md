@@ -413,7 +413,7 @@ Write failing tests before the corresponding implementation. After each phase ru
 
 ### Phase 4 — title-first catalog workflow (implemented)
 
-The CLI now accepts a title, searches AnimeSaturn's observed `/filter?key=...` route, presents numbered anime variants, loads the selected series page, parses actual `/episode/.../ep-N` links, accepts episode numbers/ranges/all, confirms the batch, and offers mpv playback or download. It never synthesizes episode URLs. Direct episode URLs remain supported.
+The CLI now accepts a title, searches AnimeSaturn's observed `/filter?key=...` route, presents numbered anime variants, loads the selected series page, parses actual `/episode/.../ep-N` links, normalizes those verified catalog links to the playable `/anime/.../ep-N` route, accepts episode numbers/ranges/all, confirms the batch, and offers mpv playback or download. It does not guess episode numbers; the route normalization is isolated to the AnimeSaturn catalog adapter and was verified against the live DOM. Direct episode URLs remain supported.
 
 The current catalog parser is intentionally scoped to the observed AnimeSaturn DOM and should be extended with fixtures if the site changes. Future work can add JSON/plumbing mode, pagination, specials/non-numeric episode labels, and richer metadata without changing the extractor fallback.
 

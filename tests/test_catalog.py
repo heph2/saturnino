@@ -22,8 +22,8 @@ def test_parse_episode_links_is_numeric_and_sorted() -> None:
     <a href='/anime/related'>Related</a>
     """
     assert parse_episode_links(html, "https://www.animesaturn.net") == [
-        EpisodeRef("1", "https://www.animesaturn.net/episode/show/ep-1"),
-        EpisodeRef("11", "https://www.animesaturn.net/episode/show/ep-11"),
+        EpisodeRef("1", "https://www.animesaturn.net/anime/show/ep-1"),
+        EpisodeRef("11", "https://www.animesaturn.net/anime/show/ep-11"),
     ]
 
 
