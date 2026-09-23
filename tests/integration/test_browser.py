@@ -11,14 +11,26 @@ from saturnino.browser import BrowserExtractor
 
 class FixtureHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
-        if self.path == "/episode":
-            body = b'''<!doctype html><title>Fixture - Demo Episodio 1</title>
+        if self.path in {"/episode", "/delayed-episode"}:
+            player = "/player/delayed" if self.path == "/delayed-episode" else "/player"
+            body = f'''<!doctype html><title>Fixture - Demo Episodio 1</title>
             <h1>Demo Episodio 1 Streaming</h1>
-            <iframe title="Fixture player" src="/player"></iframe>'''
+            <iframe title="Fixture player" src="{player}"></iframe>'''.encode()
             self._send("text/html", body)
         elif self.path == "/player":
             body = b'''<!doctype html><button type="button" id="start">Play</button>
             <script>start.onclick = () => fetch('/stream/master.m3u8');</script>'''
+            self._send("text/html", body)
+        elif self.path == "/player/delayed":
+            body = b'''<!doctype html><script>
+            setTimeout(() => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = 'Play';
+                button.onclick = () => fetch('/stream/master.m3u8');
+                document.body.append(button);
+            }, 6000);
+            </script>'''
             self._send("text/html", body)
         elif self.path == "/stream/master.m3u8":
             self._send("application/vnd.apple.mpegurl", b"#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000\nvariant.m3u8\n")
@@ -56,3 +68,9 @@ def test_browser_captures_click_triggered_nested_frame_manifest(fixture_url: str
     assert result.selected.validation is not None
     assert result.selected.validation.state == "valid"
     assert result.provider == "127.0.0.1"
+
+
+def test_browser_keeps_discovering_a_late_player_control(fixture_url: str) -> None:
+    result = asyncio.run(BrowserExtractor(timeout=20).extract(fixture_url.replace("/episode", "/delayed-episode")))
+    assert result.selected is not None
+    assert result.selected.media_type == "hls"
