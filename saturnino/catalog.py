@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 from html.parser import HTMLParser
 from time import monotonic
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +99,16 @@ def parse_anime_results(html: str, base_url: str) -> list[AnimeResult]:
     return results
 
 
+def canonical_episode_url(url: str, base_url: str) -> str:
+    """Use AnimeSaturn's playable route discovered from its episode-link route."""
+    absolute = urljoin(base_url, url)
+    parsed = urlsplit(absolute)
+    if parsed.path.startswith("/episode/"):
+        parsed = parsed._replace(path="/anime/" + parsed.path.removeprefix("/episode/"))
+        return urlunsplit(parsed)
+    return absolute
+
+
 def parse_episode_links(html: str, base_url: str) -> list[EpisodeRef]:
     episodes: dict[str, EpisodeRef] = {}
     pattern = re.compile(r"/episode/[^?#]*/ep-(\d+)(?:[/?#]|$)", re.I)
@@ -107,7 +117,7 @@ def parse_episode_links(html: str, base_url: str) -> list[EpisodeRef]:
         if not match:
             continue
         number = match.group(1)
-        episodes[number] = EpisodeRef(number, urljoin(base_url, href))
+        episodes[number] = EpisodeRef(number, canonical_episode_url(href, base_url))
     return sorted(episodes.values(), key=lambda episode: (int(episode.number), episode.number))
 
 

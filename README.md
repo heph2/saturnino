@@ -73,7 +73,7 @@ URLs can be signed and expire. They are intentionally printed as the result, so 
 
 The generic network observer monitors requests and responses from the start of navigation, including nested frames and popup pages. Candidates are scored using MIME, URL, frame, interaction, size, ad, and resource evidence. HLS, DASH, MP4, WebM, Matroska, and extensionless MIME-qualified media are supported. Validation is bounded and does not download a full video.
 
-Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow currently targets AnimeSaturn's observed search/filter and series episode-link structure; it discovers actual links rather than synthesizing episode URLs. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Downloads default to `$HOME/Downloads/saturnino/`. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
+Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow targets AnimeSaturn's observed search/filter and series episode-link structure, then normalizes its verified `/episode/.../ep-N` catalog links to the playable `/anime/.../ep-N` route. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Downloads default to `$HOME/Downloads/saturnino/`. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
 
 ## Troubleshooting
 
