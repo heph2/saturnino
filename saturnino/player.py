@@ -18,12 +18,8 @@ class PlayerInteractor:
 
     async def discover_and_interact(self, pages: Iterable[Any], deadline: float) -> int:
         import asyncio
-        import time
-
         interactions = 0
-        last_progress = time.monotonic()
         while time.monotonic() < deadline:
-            made_progress = False
             for page in list(pages):
                 await self._dismiss_overlay(page, deadline)
                 for frame in list(page.frames):
@@ -38,11 +34,6 @@ class PlayerInteractor:
                         self.interceptor.mark_player_frame(frame)
                     if clicked:
                         interactions += clicked
-                        made_progress = True
-            if made_progress:
-                last_progress = time.monotonic()
-            elif time.monotonic() - last_progress >= 5.0:
-                break
             await asyncio.sleep(min(0.5, max(0.0, deadline - time.monotonic())))
             if interactions:
                 # Allow one short rescan for requests triggered asynchronously by the click.
