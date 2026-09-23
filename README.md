@@ -1,4 +1,8 @@
-# Saturnino
+<p align="center">
+  <img src="assets/the_son_of_saturn.png" alt="Saturnino logo" width="320">
+</p>
+
+<h1 align="center">Saturnino</h1>
 
 A local Python CLI that searches AnimeSaturn by title, lets you choose an anime and episodes, extracts fresh playable media URLs with Playwright/Chromium, then either launches mpv or downloads selected episodes. It does not bypass DRM, authentication, CAPTCHA, or access controls.
 
