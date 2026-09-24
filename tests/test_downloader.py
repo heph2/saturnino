@@ -8,7 +8,7 @@ from saturnino.models import MediaCandidate
 
 
 class Handler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         body = b"synthetic media bytes"
         self.send_response(200)
         self.send_header("Content-Type", "video/mp4")
@@ -31,8 +31,18 @@ def test_download_candidate_streams_direct_file(tmp_path: Path) -> None:
     thread.start()
     try:
         candidate = MediaCandidate(f"http://127.0.0.1:{server.server_port}/video.mp4", "mp4", 100)
-        path = asyncio.run(download_candidate(candidate, "Example", "1", tmp_path))
+        updates: list[tuple[int, int | None]] = []
+        path = asyncio.run(
+            download_candidate(
+                candidate,
+                "Example",
+                "1",
+                tmp_path,
+                lambda written, total: updates.append((written, total)),
+            )
+        )
         assert path.read_bytes() == b"synthetic media bytes"
+        assert updates == [(len(b"synthetic media bytes"), len(b"synthetic media bytes"))]
     finally:
         server.shutdown()
         thread.join()

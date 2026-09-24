@@ -50,7 +50,7 @@ python main.py "Chainsmoker Cat"
 The CLI searches AnimeSaturn, lets you choose the anime variant, lists its available episodes, accepts selections such as `1,3-5` or `all`, asks for confirmation, and then offers:
 
 - `p` — extract and launch each selected episode with mpv
-- `d` — extract and save each selected episode under `$HOME/Downloads/saturnino/` (or `--output-dir`)
+- `d` — extract and save each selected episode under `$HOME/Downloads/saturnino/` (or `--output-dir`); up to three episodes run in parallel with one live progress bar per episode
 
 Examples:
 
@@ -77,7 +77,7 @@ URLs can be signed and expire. They are intentionally printed as the result, so 
 
 The generic network observer monitors requests and responses from the start of navigation, including nested frames and popup pages. Candidates are scored using MIME, URL, frame, interaction, size, ad, and resource evidence. HLS, DASH, MP4, WebM, Matroska, and extensionless MIME-qualified media are supported. Validation is bounded and does not download a full video.
 
-Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow targets AnimeSaturn's observed search/filter and series episode-link structure, then normalizes its verified `/episode/.../ep-N` catalog links to the playable `/anime/.../ep-N` route. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Downloads default to `$HOME/Downloads/saturnino/`. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
+Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow targets AnimeSaturn's observed search/filter and series episode-link structure, then normalizes its verified `/episode/.../ep-N` catalog links to the playable `/anime/.../ep-N` route. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Title downloads process up to three episodes concurrently and show per-episode terminal progress bars when stdout is interactive. Downloads default to `$HOME/Downloads/saturnino/`. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
 
 ## Troubleshooting
 

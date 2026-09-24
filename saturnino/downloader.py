@@ -6,6 +6,8 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path
 
+DownloadProgress = Callable[[int, int | None], None]
+
 from .models import MediaCandidate
 from .utils import DEFAULT_OUTPUT_DIR
 
@@ -27,7 +29,7 @@ async def download_candidate(
     title: str,
     episode: str,
     output_dir: str | Path = DEFAULT_OUTPUT_DIR,
-    progress: Callable[[str], None] | None = None,
+    progress: DownloadProgress | None = None,
 ) -> Path:
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
@@ -43,25 +45,25 @@ async def download_candidate(
     return destination
 
 
-async def _download_direct(url: str, temporary: Path, destination: Path, progress: Callable[[str], None] | None) -> None:
+async def _download_direct(url: str, temporary: Path, destination: Path, progress: DownloadProgress | None) -> None:
     try:
         import httpx
     except ImportError as exc:
         raise DownloadError("httpx is not installed; enter the Nix shell with `nix develop`") from exc
     try:
-        async with httpx.AsyncClient(follow_redirects=True, headers={"Accept-Encoding": "identity"}) as client:
-            async with client.stream("GET", url, timeout=None) as response:
-                if response.status_code < 200 or response.status_code >= 300:
-                    raise DownloadError(f"download returned HTTP {response.status_code}")
-                total = response.headers.get("content-length")
-                total_text = f"/{total} bytes" if total and total.isdigit() else " bytes"
-                written = 0
-                with temporary.open("wb") as handle:
-                    async for chunk in response.aiter_bytes(1024 * 1024):
-                        handle.write(chunk)
-                        written += len(chunk)
-                        if progress:
-                            progress(f"Downloaded {written}{total_text}")
+        async with httpx.AsyncClient(follow_redirects=True, headers={"Accept-Encoding": "identity"}) as client, client.stream(
+            "GET", url, timeout=None
+        ) as response:
+            if response.status_code < 200 or response.status_code >= 300:
+                raise DownloadError(f"download returned HTTP {response.status_code}")
+            total = response.headers.get("content-length")
+            written = 0
+            with temporary.open("wb") as handle:
+                async for chunk in response.aiter_bytes(1024 * 1024):
+                    handle.write(chunk)
+                    written += len(chunk)
+                    if progress:
+                        progress(written, int(total) if total and total.isdigit() else None)
         temporary.replace(destination)
     except DownloadError:
         temporary.unlink(missing_ok=True)

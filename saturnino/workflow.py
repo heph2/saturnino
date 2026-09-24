@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -8,6 +10,8 @@ from .browser import BrowserExtractor, ExtractionError
 from .catalog import AnimeCatalog, AnimeResult, CatalogError, EpisodeRef, select_numbers
 from .downloader import DownloadError, download_candidate
 from .playback import launch_mpv
+
+MAX_PARALLEL_EPISODES = 3
 
 
 async def run_title_workflow(
@@ -83,6 +87,52 @@ def _choose_episodes(
     return selected
 
 
+class _DownloadProgress:
+    def __init__(
+        self,
+        episodes: list[EpisodeRef],
+        output_fn: Callable[[str], None],
+        interactive: bool | None,
+    ) -> None:
+        self._episodes = episodes
+        self._output = output_fn
+        self._interactive = sys.stdout.isatty() if interactive is None else interactive
+        self._lines = {episode.number: f"Episode {episode.number}: queued" for episode in episodes}
+        self._rendered = False
+
+    def update(
+        self,
+        episode: str,
+        status: str,
+        written: int = 0,
+        total: int | None = None,
+        detail: str = "",
+    ) -> None:
+        self._lines[episode] = self._format_line(episode, status, written, total, detail)
+        if self._interactive:
+            prefix = f"\033[{len(self._episodes)}A" if self._rendered else ""
+            body = "\n".join(f"\033[2K{self._lines[item.number]}" for item in self._episodes)
+            self._output(prefix + body)
+            self._rendered = True
+        else:
+            self._output(self._lines[episode])
+
+    @staticmethod
+    def _format_line(
+        episode: str, status: str, written: int, total: int | None, detail: str
+    ) -> str:
+        width = 20
+        if total and total > 0:
+            percent = min(100, int(written * 100 / total))
+            filled = int(width * percent / 100)
+            bar = "#" * filled + "-" * (width - filled)
+            progress = f"[{bar}] {percent:3d}% {written}/{total} bytes"
+        else:
+            progress = "[" + "-" * width + "]      bytes"
+        suffix = f" — {detail}" if detail else ""
+        return f"Episode {episode}: {status:<11} {progress}{suffix}"
+
+
 async def _process_episodes(
     anime: AnimeResult,
     episodes: list[EpisodeRef],
@@ -92,31 +142,46 @@ async def _process_episodes(
     output_dir: str | Path,
     debug: Callable[[str, dict[str, Any]], None] | None,
     output_fn: Callable[[str], None],
+    progress_interactive: bool | None = None,
 ) -> int:
-    failure = False
-    for episode in episodes:
-        output_fn(f"\nExtracting episode {episode.number}...")
-        try:
-            result = await BrowserExtractor(timeout, headful=headful, debug=debug).extract(episode.url)
-            if result.selected is None:
-                output_fn(f"Episode {episode.number}: no usable media candidate.")
-                failure = True
-                continue
-            candidate = result.selected
-            output_fn(f"Episode {episode.number}: {candidate.media_type.upper()} score {candidate.score}")
-            if action in {"p", "play"}:
-                if launch_mpv(candidate.url) != 0:
-                    failure = True
-            else:
+    progress = _DownloadProgress(episodes, output_fn, progress_interactive)
+    semaphore = asyncio.Semaphore(MAX_PARALLEL_EPISODES)
+
+    async def process(episode: EpisodeRef) -> bool:
+        async with semaphore:
+            progress.update(episode.number, "extracting")
+            try:
+                result = await BrowserExtractor(timeout, headful=headful, debug=debug).extract(episode.url)
+                if result.selected is None:
+                    progress.update(episode.number, "failed", detail="no usable media candidate")
+                    return True
+                candidate = result.selected
+                if action in {"p", "play"}:
+                    progress.update(
+                        episode.number,
+                        "playing",
+                        detail=f"{candidate.media_type.upper()} score {candidate.score}",
+                    )
+                    return launch_mpv(candidate.url) != 0
+                progress.update(
+                    episode.number,
+                    "downloading",
+                    detail=f"{candidate.media_type.upper()} score {candidate.score}",
+                )
                 path = await download_candidate(
                     candidate,
                     anime.title,
                     episode.number,
                     output_dir,
-                    progress=lambda message: output_fn(f"  {message}"),
+                    progress=lambda written, total: progress.update(
+                        episode.number, "downloading", written, total
+                    ),
                 )
-                output_fn(f"Saved: {path}")
-        except (ExtractionError, DownloadError) as exc:
-            output_fn(f"Episode {episode.number} failed: {exc}")
-            failure = True
-    return 1 if failure else 0
+                progress.update(episode.number, "saved", 1, 1, str(path))
+                return False
+            except (ExtractionError, DownloadError) as exc:
+                progress.update(episode.number, "failed", detail=str(exc))
+                return True
+
+    failures = await asyncio.gather(*(process(episode) for episode in episodes))
+    return 1 if any(failures) else 0
