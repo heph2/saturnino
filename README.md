@@ -41,6 +41,14 @@ python -m mypy saturnino main.py
 
 ## Usage
 
+Tkinter GUI:
+
+```bash
+python -m saturnino.gui
+```
+
+The GUI supports title search, episode selection, playback, downloads, and a **Send completed downloads to Jellyfin (sauron)** checkbox. When enabled for downloads, files are staged locally and then uploaded atomically to `sauron:/media/jelly/anime`. Tkinter and a working display are required; use the CLI on headless systems.
+
 Title-first interactive workflow:
 
 ```bash
@@ -56,6 +64,7 @@ Examples:
 
 ```bash
 python main.py "Chainsmoker Cat" --output-dir ~/Videos/anime
+python main.py "Chainsmoker Cat" --send-to-jellyfin
 python main.py "Chainsmoker Cat" --headful --debug
 ```
 
@@ -77,7 +86,7 @@ URLs can be signed and expire. They are intentionally printed as the result, so 
 
 The generic network observer monitors requests and responses from the start of navigation, including nested frames and popup pages. Candidates are scored using MIME, URL, frame, interaction, size, ad, and resource evidence. HLS, DASH, MP4, WebM, Matroska, and extensionless MIME-qualified media are supported. Validation is bounded and does not download a full video.
 
-Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow targets AnimeSaturn's observed search/filter and series episode-link structure, then normalizes its verified `/episode/.../ep-N` catalog links to the playable `/anime/.../ep-N` route. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Title downloads process up to three episodes concurrently and show per-episode terminal progress bars when stdout is interactive. Downloads default to `$HOME/Downloads/saturnino/`. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
+Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow targets AnimeSaturn's observed search/filter and series episode-link structure, then normalizes its verified `/episode/.../ep-N` catalog links to the playable `/anime/.../ep-N` route. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Title downloads process up to three episodes concurrently and show per-episode terminal progress bars when stdout is interactive. Downloads default to `$HOME/Downloads/saturnino/`. `--send-to-jellyfin` downloads locally first, then uploads completed files over SSH to `sauron:/media/jelly/anime`, using the existing layout such as `chainsmoker_cat/ChainsmokerCat_Ep_06_SUB_ITA.mp4`. Uploads use a temporary remote `.part` file and an atomic rename; the local staging file is retained. This flag is currently available for title searches, not direct episode URLs. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
 
 ## Troubleshooting
 

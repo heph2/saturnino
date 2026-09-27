@@ -10,6 +10,7 @@ from .browser import BrowserExtractor, ExtractionError
 from .catalog import AnimeCatalog, AnimeResult, CatalogError, EpisodeRef, select_numbers
 from .downloader import DownloadError, download_candidate
 from .playback import launch_mpv
+from .transfer import TransferError, upload_to_jellyfin
 
 MAX_PARALLEL_EPISODES = 3
 
@@ -22,6 +23,7 @@ async def run_title_workflow(
     output_dir: str | Path,
     debug: Callable[[str, dict[str, Any]], None] | None = None,
     preferred_action: str | None = None,
+    send_to_jellyfin: bool = False,
     input_fn: Callable[[str], str] = input,
     output_fn: Callable[[str], None] = print,
 ) -> int:
@@ -46,12 +48,22 @@ async def run_title_workflow(
         if confirmation not in {"y", "yes"}:
             output_fn("Cancelled.")
             return 0
-        action = preferred_action or input_fn("Action: [p]lay or [d]ownload? ").strip().lower()
+        action = preferred_action or ("d" if send_to_jellyfin else input_fn("Action: [p]lay or [d]ownload? ").strip().lower())
         if action not in {"p", "play", "d", "download"}:
             output_fn("Cancelled.")
             return 0
-        return await _process_episodes(anime, selected, action, timeout, headful, output_dir, debug, output_fn)
-    except (CatalogError, ExtractionError, DownloadError) as exc:
+        return await _process_episodes(
+            anime,
+            selected,
+            action,
+            timeout,
+            headful,
+            output_dir,
+            debug,
+            output_fn,
+            send_to_jellyfin=send_to_jellyfin,
+        )
+    except (CatalogError, ExtractionError, DownloadError, TransferError) as exc:
         output_fn(f"Error: {exc}")
         return 1
 
@@ -143,6 +155,7 @@ async def _process_episodes(
     debug: Callable[[str, dict[str, Any]], None] | None,
     output_fn: Callable[[str], None],
     progress_interactive: bool | None = None,
+    send_to_jellyfin: bool = False,
 ) -> int:
     progress = _DownloadProgress(episodes, output_fn, progress_interactive)
     semaphore = asyncio.Semaphore(MAX_PARALLEL_EPISODES)
@@ -177,9 +190,14 @@ async def _process_episodes(
                         episode.number, "downloading", written, total
                     ),
                 )
-                progress.update(episode.number, "saved", 1, 1, str(path))
+                if send_to_jellyfin:
+                    progress.update(episode.number, "uploading", detail="sauron")
+                    remote_path = await upload_to_jellyfin(path, anime.title, episode.number)
+                    progress.update(episode.number, "sent", 1, 1, remote_path)
+                else:
+                    progress.update(episode.number, "saved", 1, 1, str(path))
                 return False
-            except (ExtractionError, DownloadError) as exc:
+            except (ExtractionError, DownloadError, TransferError) as exc:
                 progress.update(episode.number, "failed", detail=str(exc))
                 return True
 

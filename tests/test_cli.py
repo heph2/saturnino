@@ -32,6 +32,11 @@ def test_invalid_url_has_json_error(monkeypatch, capsys) -> None:
     assert payload["error"]["code"] == "input"
 
 
+def test_jellyfin_flag_is_available() -> None:
+    args = cli.build_parser().parse_args(["Example", "--send-to-jellyfin"])
+    assert args.send_to_jellyfin is True
+
+
 def test_mpv_uses_argument_list(monkeypatch) -> None:
     calls = []
     monkeypatch.setattr(cli.shutil, "which", lambda _name: "/bin/mpv")

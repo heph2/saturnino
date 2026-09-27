@@ -22,6 +22,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", type=_timeout_arg, default=45.0, help="total timeout in seconds (default: 45)")
     parser.add_argument("--debug", action="store_true", help="write structured diagnostics to stderr")
     parser.add_argument(
+        "--send-to-jellyfin",
+        action="store_true",
+        help="download title selections and upload them to sauron:/media/jelly/anime",
+    )
+    parser.add_argument(
         "--output-dir",
         default=str(DEFAULT_OUTPUT_DIR),
         help=f"download directory (default: {DEFAULT_OUTPUT_DIR})",
@@ -114,19 +119,29 @@ def main(argv: Sequence[str] | None = None) -> int:
                     output_dir=args.output_dir,
                     debug=_debug_event if args.debug else None,
                     preferred_action="play" if args.play else None,
+                    send_to_jellyfin=args.send_to_jellyfin,
                 )
             )
         except KeyboardInterrupt:
             print("Error: operation interrupted", file=sys.stderr)
             return 130
 
-    error = validate_input_url(args.episode_url)
-    if error:
-        payload = _error_payload("input", error)
+    if args.send_to_jellyfin:
+        input_error = "--send-to-jellyfin is available for the title workflow; pass an anime title instead of a URL"
+        payload = _error_payload("input", input_error)
         if args.json:
             print(json.dumps(payload))
         else:
-            print(f"Error: {error}", file=sys.stderr)
+            print(f"Error: {input_error}", file=sys.stderr)
+        return 2
+
+    url_error = validate_input_url(args.episode_url)
+    if url_error:
+        payload = _error_payload("input", url_error)
+        if args.json:
+            print(json.dumps(payload))
+        else:
+            print(f"Error: {url_error}", file=sys.stderr)
         return 2
 
     try:

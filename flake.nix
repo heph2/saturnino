@@ -16,6 +16,7 @@
             mypy
             playwright
             pytest
+            tkinter
           ]);
         in {
           default = pkgs.mkShell {
