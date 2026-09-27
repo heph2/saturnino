@@ -41,6 +41,14 @@ python -m mypy saturnino main.py
 
 ## Usage
 
+Small Tkinter GUI:
+
+```bash
+python -m saturnino.gui
+```
+
+The GUI mirrors the title-first workflow: search, choose an anime, select episodes, then play or download. It shows the Saturnino logo, keeps work off the window thread, and lets you change the download folder and URL-capable player executable. Those two GUI preferences are remembered locally; CLI defaults remain unchanged. Tkinter and a working display are required, so use the CLI on headless systems.
+
 Title-first interactive workflow:
 
 ```bash
