@@ -527,3 +527,34 @@ Consult current docs against the versions actually installed:
 - mpv options: https://mpv.io/manual/stable/
 
 The network, BrowserContext, Request, and APIResponse documentation was retrieved during design research. Browser observations in section 2 are the only live-site findings claimed by this handoff; proposed implementation behavior elsewhere is not evidence of successful extraction.
+
+## 18. Small Tkinter GUI (initial implementation)
+
+The initial GUI implementation is in `saturnino/gui.py` and is launchable with the command below. Continue to use this section as its acceptance contract while the UI is hardened. Add a small desktop GUI using Python's standard-library `tkinter`; do not introduce a GUI framework. The GUI is a convenience layer over the existing catalog, extraction, playback, and download workflows, not a replacement for the CLI.
+
+```bash
+python -m saturnino.gui
+```
+
+### User flow
+
+1. Show the Saturnino logo from `assets/the_son_of_saturn.png` in the header or welcome area, with a compact title and status message.
+2. Provide a title search field and a **Search** button. Search asynchronously so the window remains responsive.
+3. Display returned anime results in a selectable list, preserving the CLI's numbered-choice semantics.
+4. After an anime is selected, display its available episodes and allow selecting one, several, ranges, or all episodes. A listbox with extended selection plus a small `1,3-5`/`all` entry is acceptable; selection behavior must remain clear.
+5. Let the user choose **Play** or **Download**, then show progress and per-episode success/failure. Play uses the selected player executable; download uses the selected directory.
+6. Keep the window usable while browser extraction, validation, playback launch, and downloads run. Disable only controls whose operation would conflict with the current task, and provide cancellation where the underlying operation can safely be cancelled.
+
+### Quality-of-life settings
+
+- Initialize the download directory from the existing `$HOME/Downloads/saturnino` default.
+- Initialize the player executable from `mpv` resolution/current defaults.
+- Provide browse controls for both the download directory and player executable.
+- Persist only these two GUI preferences locally between launches. This must not alter CLI defaults, write media URLs, cookies, credentials, or browser profiles, and should tolerate a missing/corrupt settings file by reverting to defaults.
+- The player field may point to another executable that accepts a media URL. Do not add shell command templates or execute user-entered settings through a shell; pass the executable and URL as an argument list.
+
+### Boundaries and implementation shape
+
+Reuse `AnimeCatalog`, `BrowserExtractor`, `download_candidate`, and playback helpers rather than duplicating extraction logic. Keep GUI-specific state and Tk callbacks in `saturnino/gui.py`; run blocking/async work off the Tk event loop and marshal status updates back to Tk safely. The GUI should use the same validation, redaction, authorization, DRM, and temporary-URL limitations as the CLI. It must never print or persist signed media URLs as part of its settings.
+
+Add focused tests for settings fallback/persistence, episode selection mapping, player argument construction, and a smoke-level GUI construction path where the environment supports Tk. Document that Tkinter and a working display are required for the GUI; the CLI remains the fallback on headless systems. The GUI is complete when the full search → anime → episode → play/download flow works with the existing local/integration fixtures, the logo is shown, failures are surfaced in the window, and the current CLI test suite remains unchanged and passing.
