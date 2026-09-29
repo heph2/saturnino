@@ -88,6 +88,16 @@ The generic network observer monitors requests and responses from the start of n
 
 Provider-specific behavior is intentionally isolated and generic observation remains the fallback. The title workflow targets AnimeSaturn's observed search/filter and series episode-link structure, then normalizes its verified `/episode/.../ep-N` catalog links to the playable `/anime/.../ep-N` route. Direct URLs remain supported. Direct MP4 downloads use streamed HTTP; HLS/DASH downloads use ffmpeg. Title downloads process up to three episodes concurrently and show per-episode terminal progress bars when stdout is interactive. Downloads default to `$HOME/Downloads/saturnino/`. `--send-to-jellyfin` downloads locally first, then uploads completed files over SSH to `sauron:/media/jelly/anime`, using the existing layout such as `chainsmoker_cat/ChainsmokerCat_Ep_06_SUB_ITA.mp4`. Uploads use a temporary remote `.part` file and an atomic rename; the local staging file is retained. This flag is currently available for title searches, not direct episode URLs. Signed URLs are extracted immediately and not persisted. Results can still vary when the source is unavailable or expired, so use `--headful --debug` for diagnosis.
 
+## Agent skill
+
+A portable harness skill for Codex, Claude Code, and Pi lives in `skills/saturnino-download/`. Install it project-locally with:
+
+```bash
+./skills/saturnino-download/install.sh --target all --scope project
+```
+
+See its README for user-wide installation paths and the agent workflow for authorized downloads.
+
 ## Troubleshooting
 
 - `missing_playwright`: install the Python requirements and run `playwright install chromium`.
