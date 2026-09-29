@@ -60,6 +60,11 @@ def carousel_asset_paths(asset_dir: str | Path | None = None) -> list[Path]:
     ]
 
 
+def fit_image_size(width: int, height: int, max_width: int, max_height: int) -> tuple[int, int]:
+    scale = min(max_width / width, max_height / height, 1)
+    return max(1, round(width * scale)), max(1, round(height * scale))
+
+
 @dataclass(frozen=True, slots=True)
 class GuiSettings:
     download_dir: str
@@ -130,8 +135,8 @@ class SaturninoGUI:
         self._carousel_index = 0
         self._carousel_job: Any | None = None
 
-        self.root.title("Saturnino")
-        self.root.geometry("720x700")
+        self.root.title("Anime Explorer")
+        self.root.geometry("720x805")
         self.root.configure(bg=THEME["background"])
         self._build_ui()
         self.root.after(100, self._drain_queue)
@@ -161,14 +166,14 @@ class SaturninoGUI:
         header.pack(fill="x")
         ttk.Label(
             header,
-            text="SATURNINO / ANIME EXPLORER",
+            text="ANIME EXPLORER",
             foreground=THEME["accent_dark"],
             font=("TkDefaultFont", 18, "bold"),
         ).pack(side="left")
 
         self._hero_canvas = tk.Canvas(
             self.root,
-            height=155,
+            height=260,
             bg=THEME["soft_pink"],
             highlightthickness=0,
             bd=0,
@@ -264,27 +269,28 @@ class SaturninoGUI:
     def _load_carousel(self) -> None:
         for path in carousel_asset_paths():
             try:
-                try:
-                    image = tk.PhotoImage(file=str(path))
-                except tk.TclError:
-                    image = tk.PhotoImage(data=base64.b64encode(path.read_bytes()))
-                scale = max(1, (image.width() + 719) // 720)
-                if scale > 1:
-                    image = image.subsample(scale, scale)
-                self._carousel_images.append(image)
-            except tk.TclError:
-                if Image is None or ImageTk is None:
-                    continue
-                try:
+                if Image is not None and ImageTk is not None:
                     with Image.open(path) as source:
-                        source.thumbnail((720, 260))
-                        self._carousel_images.append(ImageTk.PhotoImage(source.copy()))
-                except (OSError, ValueError):
-                    continue
+                        size = fit_image_size(source.width, source.height, 700, 240)
+                        resized = source.resize(size, Image.Resampling.LANCZOS)
+                        self._carousel_images.append(ImageTk.PhotoImage(resized))
+                else:
+                    try:
+                        image = tk.PhotoImage(file=str(path))
+                    except tk.TclError:
+                        image = tk.PhotoImage(data=base64.b64encode(path.read_bytes()))
+                    scale = max(
+                        1,
+                        (image.width() + 699) // 700,
+                        (image.height() + 239) // 240,
+                    )
+                    self._carousel_images.append(image.subsample(scale, scale) if scale > 1 else image)
+            except (OSError, tk.TclError, ValueError):
+                continue
         if not self._carousel_images:
             self._hero_canvas.create_text(
                 360,
-                78,
+                130,
                 text="Search. Select. Enjoy.",
                 fill=THEME["accent_dark"],
                 font=("TkDefaultFont", 16, "bold"),
@@ -292,14 +298,14 @@ class SaturninoGUI:
             return
         self._carousel_image_id = self._hero_canvas.create_image(
             360,
-            78,
+            130,
             image=self._carousel_images[0],
         )
         self._carousel_job = self.root.after(CAROUSEL_INTERVAL_MS, self._advance_carousel)
 
     def _center_hero_image(self, event: Any) -> None:
         if self._carousel_image_id is not None:
-            self._hero_canvas.coords(self._carousel_image_id, event.width // 2, 78)
+            self._hero_canvas.coords(self._carousel_image_id, event.width // 2, 130)
 
     def _advance_carousel(self) -> None:
         if len(self._carousel_images) < 2 or self._carousel_image_id is None:
