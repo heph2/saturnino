@@ -538,8 +538,8 @@ python -m saturnino.gui
 
 ### User flow
 
-1. Show the Saturnino logo from `assets/the_son_of_saturn.png` in the header or welcome area, with a compact title and status message.
-2. Use a pink/red/white visual theme derived from the local artwork. Add a small, gently rotating hero/banner area using compatible local images from `assets/`; keep the controls and logs readable, and fall back to the logo/theme when optional artwork is unavailable.
+1. Show a compact Saturnino title and status message; the GUI does not need to display the logo.
+2. Use a pink/red/white visual theme derived from the local artwork. Add a small, gently rotating hero/banner area using transparent `*_cutout.png` images from `assets/` when available; keep the controls and logs readable, and fall back to the built-in theme when optional artwork is unavailable.
 3. Provide a title search field and a **Search** button. Search asynchronously so the window remains responsive.
 4. Display returned anime results in a selectable list, preserving the CLI's numbered-choice semantics.
 5. After an anime is selected, display its available episodes and allow selecting one, several, ranges, or all episodes. A listbox with extended selection plus a small `1,3-5`/`all` entry is acceptable; selection behavior must remain clear.
@@ -558,4 +558,4 @@ python -m saturnino.gui
 
 Reuse `AnimeCatalog`, `BrowserExtractor`, `download_candidate`, and playback helpers rather than duplicating extraction logic. Keep GUI-specific state and Tk callbacks in `saturnino/gui.py`; run blocking/async work off the Tk event loop and marshal status updates back to Tk safely. The GUI should use the same validation, redaction, authorization, DRM, and temporary-URL limitations as the CLI. It must never print or persist signed media URLs as part of its settings.
 
-Add focused tests for settings fallback/persistence, episode selection mapping, player argument construction, and a smoke-level GUI construction path where the environment supports Tk. Document that Tkinter and a working display are required for the GUI; the CLI remains the fallback on headless systems. The GUI is complete when the full search → anime → episode → play/download flow works with the existing local/integration fixtures, the logo is shown, failures are surfaced in the window, and the current CLI test suite remains unchanged and passing.
+Add focused tests for settings fallback/persistence, episode selection mapping, player argument construction, artwork selection, and a smoke-level GUI construction path where the environment supports Tk. Document that Tkinter and a working display are required for the GUI; the CLI remains the fallback on headless systems. The GUI is complete when the full search → anime → episode → play/download flow works with the existing local/integration fixtures, artwork is gracefully optional, failures are surfaced in the window, and the current CLI test suite remains unchanged and passing.
