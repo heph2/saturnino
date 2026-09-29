@@ -139,3 +139,10 @@ def test_gui_download_can_send_completed_file_to_jellyfin(monkeypatch, tmp_path:
 
     assert result == ["Episode 1: sent to /media/jelly/anime/example/Example_Ep_01_SUB_ITA.mp4"]
     assert uploaded == [(tmp_path / "Example - 01.mp4", "Example", "1")]
+
+
+def test_image_fit_preserves_full_aspect_ratio() -> None:
+    from saturnino.gui import fit_image_size
+
+    assert fit_image_size(2480, 1754, 700, 240) == (339, 240)
+    assert fit_image_size(1529, 2160, 700, 240) == (170, 240)
