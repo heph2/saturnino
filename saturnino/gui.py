@@ -136,7 +136,7 @@ class SaturninoGUI:
         self._carousel_index = 0
         self._carousel_job: Any | None = None
 
-        self.root.title("Anime Explorer")
+        self.root.title("")
         self.root.geometry("720x805")
         self.root.configure(bg=THEME["background"])
         self._build_ui()
@@ -162,15 +162,6 @@ class SaturninoGUI:
         style.map("Danger.TButton", background=[("active", THEME["danger_dark"])])
         style.configure("TEntry", fieldbackground=THEME["surface"], foreground=THEME["text"])
         style.configure("Horizontal.TProgressbar", troughcolor=THEME["soft_pink"], background=THEME["accent"])
-
-        header = ttk.Frame(self.root, padding=10)
-        header.pack(fill="x")
-        ttk.Label(
-            header,
-            text="ANIME EXPLORER",
-            foreground=THEME["accent_dark"],
-            font=("TkDefaultFont", 18, "bold"),
-        ).pack(side="left")
 
         self._hero_canvas = tk.Canvas(
             self.root,
@@ -385,7 +376,7 @@ class SaturninoGUI:
                     self.status_var.set("Operation failed")
                     self._write(f"Error: {payload}")
                     if messagebox:
-                        messagebox.showerror("Saturnino", str(payload), parent=self.root)
+                        messagebox.showerror("Error", str(payload), parent=self.root)
                 else:
                     callback, result = payload
                     callback(result)

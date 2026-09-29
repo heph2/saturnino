@@ -538,7 +538,7 @@ python -m saturnino.gui
 
 ### User flow
 
-1. Show a compact Saturnino title and status message; the GUI does not need to display the logo.
+1. Show a compact status message; the GUI does not need to display a product name or logo.
 2. Use a pink/red/white visual theme derived from the local artwork. Add a small, gently rotating hero/banner area using transparent `*_cutout.png` images from `assets/` when available; keep the controls and logs readable, and fall back to the built-in theme when optional artwork is unavailable.
 3. Provide a title search field and a **Search** button. Search asynchronously so the window remains responsive.
 4. Display returned anime results in a selectable list, preserving the CLI's numbered-choice semantics.
