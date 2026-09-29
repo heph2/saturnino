@@ -51,6 +51,9 @@ def carousel_asset_paths(asset_dir: str | Path | None = None) -> list[Path]:
     directory = Path(asset_dir) if asset_dir else Path(__file__).parent.parent / "assets"
     if not directory.exists():
         return []
+    cutouts = sorted(directory.glob("*_cutout.png"))
+    if cutouts:
+        return cutouts
     supported = {".png", ".jpg", ".jpeg", ".webp"}
     return [
         path for path in sorted(directory.iterdir())
@@ -123,7 +126,6 @@ class SaturninoGUI:
         self.episodes: list[EpisodeRef] = []
         self._queue: queue.Queue[tuple[str, Any]] = queue.Queue()
         self._busy = False
-        self._logo: Any | None = None
         self._carousel_images: list[Any] = []
         self._carousel_image_id: Any | None = None
         self._carousel_index = 0
@@ -158,17 +160,12 @@ class SaturninoGUI:
 
         header = ttk.Frame(self.root, padding=10)
         header.pack(fill="x")
-        logo_path = Path(__file__).parent.parent / "assets" / "the_son_of_saturn.png"
-        if logo_path.exists():
-            try:
-                self._logo = tk.PhotoImage(file=str(logo_path))
-                scale = max(1, self._logo.width() // 96)
-                if scale > 1:
-                    self._logo = self._logo.subsample(scale, scale)
-                ttk.Label(header, image=self._logo).pack(side="left", padx=(0, 10))
-            except tk.TclError:
-                self._logo = None
-        ttk.Label(header, text="Saturnino", font=("TkDefaultFont", 18, "bold")).pack(side="left")
+        ttk.Label(
+            header,
+            text="SATURNINO / ANIME EXPLORER",
+            foreground=THEME["accent_dark"],
+            font=("TkDefaultFont", 18, "bold"),
+        ).pack(side="left")
 
         self._hero_canvas = tk.Canvas(
             self.root,
