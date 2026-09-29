@@ -539,11 +539,12 @@ python -m saturnino.gui
 ### User flow
 
 1. Show the Saturnino logo from `assets/the_son_of_saturn.png` in the header or welcome area, with a compact title and status message.
-2. Provide a title search field and a **Search** button. Search asynchronously so the window remains responsive.
-3. Display returned anime results in a selectable list, preserving the CLI's numbered-choice semantics.
-4. After an anime is selected, display its available episodes and allow selecting one, several, ranges, or all episodes. A listbox with extended selection plus a small `1,3-5`/`all` entry is acceptable; selection behavior must remain clear.
-5. Let the user choose **Play** or **Download**, then show progress and per-episode success/failure. Play uses the selected player executable; download uses the selected directory.
-6. Keep the window usable while browser extraction, validation, playback launch, and downloads run. Disable only controls whose operation would conflict with the current task, and provide cancellation where the underlying operation can safely be cancelled.
+2. Use a pink/red/white visual theme derived from the local artwork. Add a small, gently rotating hero/banner area using compatible local images from `assets/`; keep the controls and logs readable, and fall back to the logo/theme when optional artwork is unavailable.
+3. Provide a title search field and a **Search** button. Search asynchronously so the window remains responsive.
+4. Display returned anime results in a selectable list, preserving the CLI's numbered-choice semantics.
+5. After an anime is selected, display its available episodes and allow selecting one, several, ranges, or all episodes. A listbox with extended selection plus a small `1,3-5`/`all` entry is acceptable; selection behavior must remain clear.
+6. Let the user choose **Play** or **Download**, then show progress and per-episode success/failure. Play uses the selected player executable; download uses the selected directory.
+7. Keep the window usable while browser extraction, validation, playback launch, and downloads run. Disable only controls whose operation would conflict with the current task, and provide cancellation where the underlying operation can safely be cancelled.
 
 ### Quality-of-life settings
 

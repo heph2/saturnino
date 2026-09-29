@@ -47,7 +47,7 @@ Tkinter GUI:
 python -m saturnino.gui
 ```
 
-The GUI mirrors the title-first workflow: search, choose an anime, select episodes, then play or download. It shows the Saturnino logo, keeps work off the window thread, and lets you change the download folder and URL-capable player executable. It also provides a **Send completed downloads to Jellyfin (sauron)** checkbox; enabled downloads are staged locally and uploaded atomically to `sauron:/media/jelly/anime`. Tkinter and a working display are required, so use the CLI on headless systems.
+The GUI mirrors the title-first workflow: search, choose an anime, select episodes, then play or download. It uses a pink/red/white Saturnino theme, shows the logo, and gently cycles through compatible local artwork in `assets/` when available. JPEG artwork uses Pillow; without the optional artwork files, the GUI falls back to its built-in theme and logo. It keeps work off the window thread and lets you change the download folder and URL-capable player executable. Those two GUI preferences are remembered locally; CLI defaults remain unchanged. It also provides a **Send completed downloads to Jellyfin (sauron)** checkbox; enabled downloads are staged locally and uploaded atomically to `sauron:/media/jelly/anime`. Tkinter, Pillow, and a working display are required for the full GUI, so use the CLI on headless systems.
 
 Title-first interactive workflow:
 

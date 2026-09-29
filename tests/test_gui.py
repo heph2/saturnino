@@ -7,6 +7,12 @@ from saturnino.catalog import EpisodeRef
 from saturnino.models import ExtractionResult, MediaCandidate
 
 
+def test_theme_palette_is_pink_red_and_white() -> None:
+    assert gui.THEME["accent"] == "#e94f8a"
+    assert gui.THEME["danger"] == "#d9415d"
+    assert gui.THEME["surface"] == "#ffffff"
+
+
 def test_progress_percent_is_bounded_and_handles_unknown_size() -> None:
     assert gui.progress_percent(25, 100) == 25
     assert gui.progress_percent(150, 100) == 100
