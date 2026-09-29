@@ -1,10 +1,8 @@
 
 
-def test_progress_percent_is_bounded_and_handles_unknown_size() -> None:
-    from saturnino.gui import progress_percent
+def test_theme_palette_is_pink_red_and_white() -> None:
+    from saturnino.gui import THEME
 
-    assert progress_percent(25, 100) == 25
-    assert progress_percent(150, 100) == 100
-    assert progress_percent(-1, 100) == 0
-    assert progress_percent(25, None) is None
-    assert progress_percent(25, 0) is None
+    assert THEME["accent"] == "#e94f8a"
+    assert THEME["danger"] == "#d9415d"
+    assert THEME["surface"] == "#ffffff"

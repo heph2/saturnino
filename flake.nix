@@ -13,6 +13,7 @@
           pkgs = import nixpkgs { inherit system; };
           python = pkgs.python3.withPackages (ps: with ps; [
             httpx
+            pillow
             mypy
             playwright
             pytest

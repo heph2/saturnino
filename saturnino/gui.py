@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import queue
@@ -24,6 +25,36 @@ try:
 except ImportError:  # pragma: no cover - depends on the host Python installation.
     tk = None  # type: ignore[assignment]
     filedialog = messagebox = ttk = None  # type: ignore[assignment]
+
+try:
+    from PIL import Image, ImageTk
+except ImportError:  # pragma: no cover - optional when no image assets are available.
+    Image = ImageTk = None  # type: ignore[assignment]
+
+
+THEME = {
+    "background": "#fff7fb",
+    "surface": "#ffffff",
+    "accent": "#e94f8a",
+    "accent_dark": "#b51f59",
+    "danger": "#d9415d",
+    "danger_dark": "#a52a43",
+    "text": "#3a1e2a",
+    "muted": "#8b6674",
+    "soft_pink": "#fde2ee",
+}
+CAROUSEL_INTERVAL_MS = 8000
+
+
+def carousel_asset_paths(asset_dir: str | Path | None = None) -> list[Path]:
+    directory = Path(asset_dir) if asset_dir else Path(__file__).parent.parent / "assets"
+    if not directory.exists():
+        return []
+    supported = {".png", ".jpg", ".jpeg", ".webp"}
+    return [
+        path for path in sorted(directory.iterdir())
+        if path.suffix.lower() in supported and path.name != "the_son_of_saturn.png"
+    ]
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,14 +123,38 @@ class SaturninoGUI:
         self._queue: queue.Queue[tuple[str, Any]] = queue.Queue()
         self._busy = False
         self._logo: Any | None = None
+        self._carousel_images: list[Any] = []
+        self._carousel_image_id: Any | None = None
+        self._carousel_index = 0
+        self._carousel_job: Any | None = None
 
         self.root.title("Saturnino")
-        self.root.geometry("720x560")
+        self.root.geometry("720x700")
+        self.root.configure(bg=THEME["background"])
         self._build_ui()
         self.root.after(100, self._drain_queue)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
     def _build_ui(self) -> None:
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("TFrame", background=THEME["background"])
+        style.configure("TLabel", background=THEME["background"], foreground=THEME["text"])
+        style.configure("Status.TLabel", background=THEME["background"], foreground=THEME["accent_dark"])
+        style.configure("TLabelframe", background=THEME["background"], foreground=THEME["accent_dark"])
+        style.configure("TLabelframe.Label", background=THEME["background"], foreground=THEME["accent_dark"])
+        style.configure("TButton", background=THEME["surface"], foreground=THEME["text"], padding=(10, 6))
+        style.map("TButton", background=[("active", THEME["soft_pink"])])
+        style.configure("Accent.TButton", background=THEME["accent"], foreground=THEME["surface"])
+        style.map("Accent.TButton", background=[("active", THEME["accent_dark"])])
+        style.configure("Danger.TButton", background=THEME["danger"], foreground=THEME["surface"])
+        style.map("Danger.TButton", background=[("active", THEME["danger_dark"])])
+        style.configure("TEntry", fieldbackground=THEME["surface"], foreground=THEME["text"])
+        style.configure("Horizontal.TProgressbar", troughcolor=THEME["soft_pink"], background=THEME["accent"])
+
         header = ttk.Frame(self.root, padding=10)
         header.pack(fill="x")
         logo_path = Path(__file__).parent.parent / "assets" / "the_son_of_saturn.png"
@@ -113,8 +168,20 @@ class SaturninoGUI:
             except tk.TclError:
                 self._logo = None
         ttk.Label(header, text="Saturnino", font=("TkDefaultFont", 18, "bold")).pack(side="left")
+
+        self._hero_canvas = tk.Canvas(
+            self.root,
+            height=155,
+            bg=THEME["soft_pink"],
+            highlightthickness=0,
+            bd=0,
+        )
+        self._hero_canvas.pack(fill="x", padx=10, pady=(0, 8))
+        self._hero_canvas.bind("<Configure>", self._center_hero_image)
+        self._load_carousel()
+
         self.status_var = tk.StringVar(value="Search for an anime to begin")
-        ttk.Label(self.root, textvariable=self.status_var, padding=(10, 0)).pack(fill="x")
+        ttk.Label(self.root, textvariable=self.status_var, style="Status.TLabel", padding=(10, 0)).pack(fill="x")
 
         search = ttk.Frame(self.root, padding=10)
         search.pack(fill="x")
@@ -122,16 +189,27 @@ class SaturninoGUI:
         self.search_entry = ttk.Entry(search, textvariable=self.search_var)
         self.search_entry.pack(side="left", fill="x", expand=True)
         self.search_entry.bind("<Return>", lambda _event: self.search())
-        self.search_button = ttk.Button(search, text="Search", command=self.search)
+        self.search_button = ttk.Button(search, text="Search", style="Accent.TButton", command=self.search)
         self.search_button.pack(side="left", padx=(8, 0))
 
         lists = ttk.Frame(self.root, padding=(10, 0))
         lists.pack(fill="both", expand=True)
         ttk.Label(lists, text="Anime results").grid(row=0, column=0, sticky="w")
         ttk.Label(lists, text="Episodes").grid(row=0, column=1, sticky="w")
-        self.results_list = tk.Listbox(lists, exportselection=False)
+        listbox_options: dict[str, Any] = {
+            "exportselection": False,
+            "bg": THEME["surface"],
+            "fg": THEME["text"],
+            "selectbackground": THEME["accent"],
+            "selectforeground": THEME["surface"],
+            "relief": "flat",
+            "highlightthickness": 1,
+            "highlightcolor": THEME["accent"],
+            "highlightbackground": THEME["soft_pink"],
+        }
+        self.results_list = tk.Listbox(lists, **listbox_options)
         self.results_list.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
-        self.episodes_list = tk.Listbox(lists, selectmode="extended", exportselection=False)
+        self.episodes_list = tk.Listbox(lists, selectmode="extended", **listbox_options)
         self.episodes_list.grid(row=1, column=1, sticky="nsew")
         lists.rowconfigure(1, weight=1)
         lists.columnconfigure(0, weight=1)
@@ -159,9 +237,9 @@ class SaturninoGUI:
         self.selection_var = tk.StringVar()
         ttk.Label(actions, text="Selection (optional)").pack(side="left")
         ttk.Entry(actions, textvariable=self.selection_var, width=18).pack(side="left", padx=8)
-        self.play_button = ttk.Button(actions, text="Play", command=lambda: self.start("play"))
+        self.play_button = ttk.Button(actions, text="Play", style="Danger.TButton", command=lambda: self.start("play"))
         self.play_button.pack(side="right")
-        self.download_button = ttk.Button(actions, text="Download", command=lambda: self.start("download"))
+        self.download_button = ttk.Button(actions, text="Download", style="Accent.TButton", command=lambda: self.start("download"))
         self.download_button.pack(side="right", padx=(0, 8))
 
         progress = ttk.LabelFrame(self.root, text="Progress", padding=8)
@@ -171,8 +249,70 @@ class SaturninoGUI:
         self.progress_bar = ttk.Progressbar(progress, maximum=100, mode="determinate")
         self.progress_bar.pack(fill="x", pady=(5, 0))
 
-        self.output = tk.Text(self.root, height=5, state="disabled", wrap="word")
+        self.output = tk.Text(
+            self.root,
+            height=5,
+            state="disabled",
+            wrap="word",
+            bg=THEME["surface"],
+            fg=THEME["text"],
+            insertbackground=THEME["accent"],
+            relief="flat",
+            highlightthickness=1,
+            highlightcolor=THEME["accent"],
+            highlightbackground=THEME["soft_pink"],
+        )
         self.output.pack(fill="x", padx=10, pady=(0, 10))
+
+    def _load_carousel(self) -> None:
+        for path in carousel_asset_paths():
+            try:
+                try:
+                    image = tk.PhotoImage(file=str(path))
+                except tk.TclError:
+                    image = tk.PhotoImage(data=base64.b64encode(path.read_bytes()))
+                scale = max(1, (image.width() + 719) // 720)
+                if scale > 1:
+                    image = image.subsample(scale, scale)
+                self._carousel_images.append(image)
+            except tk.TclError:
+                if Image is None or ImageTk is None:
+                    continue
+                try:
+                    with Image.open(path) as source:
+                        source.thumbnail((720, 260))
+                        self._carousel_images.append(ImageTk.PhotoImage(source.copy()))
+                except (OSError, ValueError):
+                    continue
+        if not self._carousel_images:
+            self._hero_canvas.create_text(
+                360,
+                78,
+                text="Search. Select. Enjoy.",
+                fill=THEME["accent_dark"],
+                font=("TkDefaultFont", 16, "bold"),
+            )
+            return
+        self._carousel_image_id = self._hero_canvas.create_image(
+            360,
+            78,
+            image=self._carousel_images[0],
+        )
+        self._carousel_job = self.root.after(CAROUSEL_INTERVAL_MS, self._advance_carousel)
+
+    def _center_hero_image(self, event: Any) -> None:
+        if self._carousel_image_id is not None:
+            self._hero_canvas.coords(self._carousel_image_id, event.width // 2, 78)
+
+    def _advance_carousel(self) -> None:
+        if len(self._carousel_images) < 2 or self._carousel_image_id is None:
+            return
+        self._carousel_index = (self._carousel_index + 1) % len(self._carousel_images)
+        self._hero_canvas.itemconfigure(
+            self._carousel_image_id,
+            image=self._carousel_images[self._carousel_index],
+        )
+        self._carousel_job = self.root.after(CAROUSEL_INTERVAL_MS, self._advance_carousel)
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
@@ -369,6 +509,8 @@ class SaturninoGUI:
 
     def close(self) -> None:
         if tk is not None:
+            if self._carousel_job is not None:
+                self.root.after_cancel(self._carousel_job)
             save_settings(GuiSettings(self.download_var.get(), self.player_var.get()))
             self.root.destroy()
 
